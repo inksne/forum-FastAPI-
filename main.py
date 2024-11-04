@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.middleware.cors import CORSMiddleware
-# from fastapi_users import fastapi_users, FastAPIUsers
+#
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -10,8 +10,7 @@ from datetime import datetime
 from database.database import create_db_and_tables, get_async_session
 from models.models import Role, Post, User
 from auth.auth import router as jwt_router
-# from auth.schemas import UserRead, UserCreate
-# from auth.manager import get_user_manager
+
 
 app = FastAPI(
     title='forum'
@@ -178,31 +177,3 @@ async def delete_user_by_id(user_id: int, user_password: str, session: AsyncSess
 #роутеры
 
 app.include_router(jwt_router)
-
-# @app.get("/protected-route")
-# def protected_route(user: User = Depends(get_current_user)):
-#     return f"Привет, {user.username}!"
-
-# @app.get("/unprotected-route")
-# def unprotected_route():
-#     return f"Привет, аноним!"
-
-
-
-# fastapi_users = FastAPIUsers[User, int](
-#     get_user_manager,
-#     [auth_backend],
-# )
-
-
-# app.include_router(
-#     fastapi_users.get_auth_router(auth_backend),
-#     prefix="/auth/jwt",
-#     tags=["auth"],
-# )
-
-# app.include_router(
-#     fastapi_users.get_register_router(UserRead, UserCreate),
-#     prefix="/auth",
-#     tags=["auth"],
-# )
