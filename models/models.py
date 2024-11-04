@@ -15,20 +15,21 @@ class Role(Base):
     permissions = Column(JSON)
 
 class User(Base):
-    __tablename__ = 'user'
+    __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     email = Column(String, nullable=False)
     username = Column(String, nullable=False)
-    hashed_password = Column(String(length=1024), nullable=False)
+    password = Column(String(length=1024), nullable=False)
     registered_at = Column(TIMESTAMP, server_default=func.now())
     role_id = Column(Integer, ForeignKey(Role.id))
-    is_active = Column(Boolean, default=True, nullable=False)
-    is_superuser = Column(Boolean, default=False, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
+    # is_superuser = Column(Boolean, default=False, nullable=False)
+    # is_verified = Column(Boolean, default=False, nullable=False)
 
 class Post(Base):
     __tablename__ = 'post'
     id = Column(Integer, primary_key=True)
     deployed_at = Column(TIMESTAMP, server_default=func.now())
     author_id = Column(Integer, ForeignKey(User.id)) 
+    title = Column(String(length=32), nullable=False)
     description = Column(String(length=1024), nullable=False)

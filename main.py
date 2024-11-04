@@ -1,13 +1,17 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.middleware.cors import CORSMiddleware
+# from fastapi_users import fastapi_users, FastAPIUsers
 
 from pydantic import BaseModel
 from datetime import datetime
 
 from database.database import create_db_and_tables, get_async_session
 from models.models import Role, Post, User
+from auth.auth import router as jwt_router
+# from auth.schemas import UserRead, UserCreate
+# from auth.manager import get_user_manager
 
 app = FastAPI(
     title='forum'
@@ -27,13 +31,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], 
-    allow_headers=['Content-Type', 'Set-Cookie', 'Access-Control-Allow-Headers', 'Access-Control-Allow-Origin', 'Authorization'],
+    allow_methods=["*"], 
+    allow_headers=["*"],
 )
 
 #pydantic модели для restfulAPI
 class PostCreate(BaseModel):
     author_id: int
+    title: str
     description: str
 
 class RoleResponse(BaseModel):
@@ -51,6 +56,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    password: str
     registered_at: datetime
     role_id: int
 
@@ -65,13 +71,13 @@ async def startup():
 
 
 
-# @app.post("/roles/", response_model=dict)
-# async def create_role(name: str, permissions: dict = None, session: AsyncSession = Depends(get_async_session)):
-#     new_role = Role(name=name, permissions=permissions)
-#     session.add(new_role)
-#     await session.commit()
-#     await session.refresh(new_role)  # Обновить объект, чтобы получить id
-#     return {"id": new_role.id, "name": new_role.name, "permissions": new_role.permissions}
+@app.post("/roles/", response_model=dict)
+async def create_role(name: str, permissions: dict = None, session: AsyncSession = Depends(get_async_session)):
+    new_role = Role(name=name, permissions=permissions)
+    session.add(new_role)
+    await session.commit()
+    await session.refresh(new_role)  # Обновить объект, чтобы получить id
+    return {"id": new_role.id, "name": new_role.name, "permissions": new_role.permissions}
 
 
 
@@ -93,7 +99,7 @@ async def get_all_posts(session: AsyncSession = Depends(get_async_session)):
 
 @app.post('/posts/', response_model=PostResponse)
 async def create_post(post: PostCreate, session: AsyncSession = Depends(get_async_session)):
-    new_post = Post(author_id=post.author_id, description=post.description)
+    new_post = Post(author_id=post.author_id, title=post.title, description=post.description)
     session.add(new_post)
     await session.commit()
     await session.refresh(new_post)
@@ -140,7 +146,7 @@ async def change_username(user_id: int, user_update_username: UserUpdateUsername
 
 
 @app.get('/roles/{role_id}', response_model=RoleResponse)
-async def get_user_by_id(role_id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_role_by_id(role_id: int, session: AsyncSession = Depends(get_async_session)):
     result = await session.execute(select(Role).where(Role.id == role_id))
     role = result.scalar_one_or_none()
     if role is None:
@@ -148,12 +154,55 @@ async def get_user_by_id(role_id: int, session: AsyncSession = Depends(get_async
     return role
 
 
+
 @app.delete('/users/{user_id}', response_model=str)
-async def delete_user_by_id(user_id: int, session: AsyncSession = Depends(get_async_session)):
-    result = await session.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
+async def delete_user_by_id(user_id: int, user_password: str, session: AsyncSession = Depends(get_async_session)):
+
+    result_user = await session.execute(select(User).where(User.id == user_id, User.hashed_password == user_password))
+    user = result_user.scalar_one_or_none()
+    
     if user is None:
         raise HTTPException(status_code=404, detail='Пользователь не найден')
+
+    result_posts = await session.execute(select(Post).where(Post.author_id == user_id))
+    posts = result_posts.scalars().all()
+
+    for post in posts:
+        await session.delete(post)
+
     await session.delete(user)
     await session.commit()
-    return 'Пользователь успешно удален.'
+    
+    return 'Пользователь и все его посты успешно удалены.'
+
+#роутеры
+
+app.include_router(jwt_router)
+
+# @app.get("/protected-route")
+# def protected_route(user: User = Depends(get_current_user)):
+#     return f"Привет, {user.username}!"
+
+# @app.get("/unprotected-route")
+# def unprotected_route():
+#     return f"Привет, аноним!"
+
+
+
+# fastapi_users = FastAPIUsers[User, int](
+#     get_user_manager,
+#     [auth_backend],
+# )
+
+
+# app.include_router(
+#     fastapi_users.get_auth_router(auth_backend),
+#     prefix="/auth/jwt",
+#     tags=["auth"],
+# )
+
+# app.include_router(
+#     fastapi_users.get_register_router(UserRead, UserCreate),
+#     prefix="/auth",
+#     tags=["auth"],
+# )
