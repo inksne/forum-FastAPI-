@@ -1,14 +1,16 @@
 from fastapi import APIRouter, Depends
 from fastapi.security import HTTPBearer
-from auth.schemas import UserSchema
 from auth.helpers import create_access_token, create_refresh_token
 from auth.validation import (
     get_current_token_payload,
     get_current_auth_user_for_refresh,
     get_current_active_auth_user,
-    validate_auth_user
+    validate_auth_user_db
 )
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.database import get_async_session
+from models.models import User
 
 
 http_bearer = HTTPBearer(auto_error=False)
@@ -24,7 +26,7 @@ router = APIRouter(prefix='/jwt', tags=["JWT"], dependencies=[Depends(http_beare
 
 
 @router.post('/login/', response_model=TokenInfo)
-async def auth_user_issue_jwt(user: UserSchema = Depends(validate_auth_user)):
+async def auth_user_issue_jwt(user: User = Depends(validate_auth_user_db)):
     access_token = create_access_token(user)
     refresh_token = create_refresh_token(user)
     return TokenInfo(access_token=access_token, refresh_token=refresh_token)
@@ -32,7 +34,7 @@ async def auth_user_issue_jwt(user: UserSchema = Depends(validate_auth_user)):
 
 
 @router.post("/refresh/", response_model=TokenInfo, response_model_exclude_none=True)
-async def auth_refresh_jwt(user: UserSchema = Depends(get_current_auth_user_for_refresh)):
+async def auth_refresh_jwt(user: User = Depends(get_current_auth_user_for_refresh)):
     access_token = create_access_token(user)
     return TokenInfo(access_token=access_token)
 
@@ -40,7 +42,7 @@ async def auth_refresh_jwt(user: UserSchema = Depends(get_current_auth_user_for_
 @router.get('/users/me/')
 async def auth_user_check_self_info(
     payload: dict = Depends(get_current_token_payload), 
-    user: UserSchema = Depends(get_current_active_auth_user),
+    user: User = Depends(get_current_active_auth_user),
 ):
     iat = payload.get("iat")
     return {

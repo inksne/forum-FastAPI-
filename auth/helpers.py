@@ -1,7 +1,12 @@
 from auth.schemas import UserSchema
+from models.models import User
+from database.database import get_async_session
 from auth.utils import encode_jwt, decode_jwt, validate_password, hash_password
 from config import settings
 from datetime import timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
 
 
 TOKEN_TYPE_FIELD = "type"
@@ -24,8 +29,6 @@ def create_jwt(
 def create_access_token(user: UserSchema) -> str:
     jwt_payload = {
         "sub": user.username,
-        # "username": user.username,
-        # "email": user.email
     }
     return create_jwt(
         token_type=ACCESS_TOKEN_TYPE,
@@ -38,11 +41,14 @@ def create_access_token(user: UserSchema) -> str:
 def create_refresh_token(user: UserSchema) -> str:
     jwt_payload = {
         "sub": user.username,
-        # "username": user.username,
-        # "email": user.email
     }
     return create_jwt(
         token_type=REFRESH_TOKEN_TYPE,
         token_data=jwt_payload,
         expire_timedelta=timedelta(days=settings.auth_jwt.refresh_token_expire_days)
     )
+
+
+async def get_user_by_username(username: str, db: AsyncSession) -> User | None:
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalars().first()

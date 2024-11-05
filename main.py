@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.middleware.cors import CORSMiddleware
+from starlette import status
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -9,6 +10,8 @@ from datetime import datetime
 from database.database import create_db_and_tables, get_async_session
 from models.models import Role, Post, User
 from auth.auth import router as jwt_router
+from auth.utils import hash_password
+from auth.validation import get_current_active_auth_user
 
 
 app = FastAPI(
@@ -52,7 +55,7 @@ class PostResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: str
+    email: str | None = None
     username: str
     registered_at: datetime
     role_id: int
@@ -74,7 +77,14 @@ async def startup():
 #роли
 
 @app.post("/roles/", response_model=dict)
-async def create_role(name: str, permissions: dict = None, session: AsyncSession = Depends(get_async_session)):
+async def create_role(
+    name: str,
+    permissions: dict = None,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
+    if current_user.role_id != 4:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Недостаточно прав')
     new_role = Role(name=name, permissions=permissions)
     session.add(new_role)
     await session.commit()
@@ -84,7 +94,7 @@ async def create_role(name: str, permissions: dict = None, session: AsyncSession
 
 
 @app.get("/roles/", response_model=list[dict])
-async def get_all_roles(session: AsyncSession = Depends(get_async_session)):
+async def get_all_roles(session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_active_auth_user)):
     result = await session.execute(select(Role))
     roles = result.scalars().all()
     return [{"id": role.id, "name": role.name, "permissions": role.permissions} for role in roles]
@@ -92,17 +102,24 @@ async def get_all_roles(session: AsyncSession = Depends(get_async_session)):
 
 
 @app.get('/roles/{role_id}', response_model=RoleResponse)
-async def get_role_by_id(role_id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_role_by_id(
+    role_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
+    if current_user.role_id not in [2, 4]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Недостаточно прав')
     result = await session.execute(select(Role).where(Role.id == role_id))
     role = result.scalar_one_or_none()
     if role is None:
         raise HTTPException(status_code=404, detail='Роль не найдена')
     return role
 
+
 #посты
 
 @app.get('/posts/', response_model=list[dict])
-async def get_all_posts(session: AsyncSession = Depends(get_async_session)):
+async def get_all_posts(session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_active_auth_user)):
     result = await session.execute(select(Post))
     posts = result.scalars().all()
     return [{'id': post.id, 'deployed_at': post.deployed_at, 'author_id': post.author_id, 'description': post.description} for post in posts]
@@ -110,8 +127,11 @@ async def get_all_posts(session: AsyncSession = Depends(get_async_session)):
 
 
 @app.post('/posts/', response_model=PostResponse)
-async def create_post(post: PostCreate, session: AsyncSession = Depends(get_async_session)):
-    new_post = Post(author_id=post.author_id, title=post.title, description=post.description)
+async def create_post(post: PostCreate,
+        current_user: User = Depends(get_current_active_auth_user),
+        session: AsyncSession = Depends(get_async_session),
+    ):
+    new_post = Post(author_id=current_user.id, title=post.title, description=post.description)
     session.add(new_post)
     await session.commit()
     await session.refresh(new_post)
@@ -120,8 +140,9 @@ async def create_post(post: PostCreate, session: AsyncSession = Depends(get_asyn
 #пользователи
 
 @app.post('/users/register', response_model=UserResponse)
-async def register(user: UserCreate, session: AsyncSession = Depends(get_async_session)):
-    new_user = User(username=user.username, email=user.email, password=user.password)
+async def register(username: str, password: str, email: str | None = None, session: AsyncSession = Depends(get_async_session)):
+    hashed_password = hash_password(password).decode('utf-8')
+    new_user = User(username=username, password=hashed_password, email=email)
     session.add(new_user)
     await session.commit()
     await session.refresh(new_user)
@@ -129,7 +150,11 @@ async def register(user: UserCreate, session: AsyncSession = Depends(get_async_s
 
 
 @app.get('/users/{user_id}', response_model=UserResponse)
-async def get_user_by_id(user_id: int, session: AsyncSession = Depends(get_async_session)):
+async def get_user_by_id(
+    user_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
@@ -139,7 +164,10 @@ async def get_user_by_id(user_id: int, session: AsyncSession = Depends(get_async
 
 
 @app.get('/users/', response_model=list[dict])
-async def get_all_users(session: AsyncSession = Depends(get_async_session)):
+async def get_all_users(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
     result = await session.execute(select(User))
     users = result.scalars().all()
     return [
@@ -153,7 +181,12 @@ async def get_all_users(session: AsyncSession = Depends(get_async_session)):
 
 
 @app.put('/users/{user_id}', response_model=UserResponse)
-async def change_username(user_id: int, user_update_username: UserUpdateUsername, session: AsyncSession = Depends(get_async_session)):
+async def change_username(
+    user_id: int,
+    user_update_username: UserUpdateUsername,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None:
@@ -166,9 +199,33 @@ async def change_username(user_id: int, user_update_username: UserUpdateUsername
 
 
 
-@app.delete('/users/{user_id}', response_model=str)
-async def delete_user_by_id(user_id: int, user_password: str, session: AsyncSession = Depends(get_async_session)):
+@app.put('/users/role/{user_id}', response_model=UserResponse)
+async def change_role(
+    user_id: int,
+    user_update_role: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
+    if current_user.role_id != 4:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Недостаточно прав')
+    result = await session.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail='Пользователь не найден')
+    user.role_id = user_update_role
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+    return user
 
+
+@app.delete('/users/{user_id}', response_model=str)
+async def delete_user_by_id(
+    user_id: int,
+    user_password: str,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
     result_user = await session.execute(select(User).where(User.id == user_id, User.hashed_password == user_password))
     user = result_user.scalar_one_or_none()
     
