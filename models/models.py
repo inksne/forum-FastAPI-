@@ -17,14 +17,13 @@ class Role(Base):
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
-    email = Column(String, nullable=False)
     username = Column(String, nullable=False)
+    email = Column(String)
     password = Column(String(length=1024), nullable=False)
     registered_at = Column(TIMESTAMP, server_default=func.now())
-    role_id = Column(Integer, ForeignKey(Role.id))
+    role_id = Column(Integer, ForeignKey(Role.id), default=2)
     active = Column(Boolean, default=True, nullable=False)
-    # is_superuser = Column(Boolean, default=False, nullable=False)
-    # is_verified = Column(Boolean, default=False, nullable=False)
+
 
 class Post(Base):
     __tablename__ = 'post'

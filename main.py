@@ -54,12 +54,16 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
-    password: str
     registered_at: datetime
     role_id: int
 
 class UserUpdateUsername(BaseModel):
     username: str
+
+class UserCreate(BaseModel):
+    username: str
+    email: str | None = None
+    password: str
 
 #restfulAPI
 
@@ -67,14 +71,14 @@ class UserUpdateUsername(BaseModel):
 async def startup():
     await create_db_and_tables()
 
-
+#роли
 
 @app.post("/roles/", response_model=dict)
 async def create_role(name: str, permissions: dict = None, session: AsyncSession = Depends(get_async_session)):
     new_role = Role(name=name, permissions=permissions)
     session.add(new_role)
     await session.commit()
-    await session.refresh(new_role)  # Обновить объект, чтобы получить id
+    await session.refresh(new_role)  
     return {"id": new_role.id, "name": new_role.name, "permissions": new_role.permissions}
 
 
@@ -86,6 +90,16 @@ async def get_all_roles(session: AsyncSession = Depends(get_async_session)):
     return [{"id": role.id, "name": role.name, "permissions": role.permissions} for role in roles]
 
 
+
+@app.get('/roles/{role_id}', response_model=RoleResponse)
+async def get_role_by_id(role_id: int, session: AsyncSession = Depends(get_async_session)):
+    result = await session.execute(select(Role).where(Role.id == role_id))
+    role = result.scalar_one_or_none()
+    if role is None:
+        raise HTTPException(status_code=404, detail='Роль не найдена')
+    return role
+
+#посты
 
 @app.get('/posts/', response_model=list[dict])
 async def get_all_posts(session: AsyncSession = Depends(get_async_session)):
@@ -103,6 +117,15 @@ async def create_post(post: PostCreate, session: AsyncSession = Depends(get_asyn
     await session.refresh(new_post)
     return new_post
 
+#пользователи
+
+@app.post('/users/register', response_model=UserResponse)
+async def register(user: UserCreate, session: AsyncSession = Depends(get_async_session)):
+    new_user = User(username=user.username, email=user.email, password=user.password)
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+    return new_user
 
 
 @app.get('/users/{user_id}', response_model=UserResponse)
@@ -140,16 +163,6 @@ async def change_username(user_id: int, user_update_username: UserUpdateUsername
     await session.commit()
     await session.refresh(user)
     return user
-
-
-
-@app.get('/roles/{role_id}', response_model=RoleResponse)
-async def get_role_by_id(role_id: int, session: AsyncSession = Depends(get_async_session)):
-    result = await session.execute(select(Role).where(Role.id == role_id))
-    role = result.scalar_one_or_none()
-    if role is None:
-        raise HTTPException(status_code=404, detail='Роль не найдена')
-    return role
 
 
 
