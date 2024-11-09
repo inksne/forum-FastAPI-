@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, validator
 from datetime import datetime
+from typing import Optional
 
 
 class UserSchema(BaseModel):
@@ -7,7 +8,7 @@ class UserSchema(BaseModel):
     # id: int
     username: str
     password: str | bytes
-    email: EmailStr | None = None
+    email: Optional[EmailStr] = None
     # registered_at: datetime
     # role_id: int
     active: bool = True
@@ -20,3 +21,9 @@ class UserSchema(BaseModel):
             email=obj.email,
             active=obj.active
         )
+    
+    @validator('email', pre=True, always=True)
+    def check_email(cls, v):
+        if v == 'null':
+            return None
+        return v
