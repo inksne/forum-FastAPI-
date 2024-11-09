@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, APIRouter, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.middleware.cors import CORSMiddleware
 from starlette import status
 
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
 
 from database.database import create_db_and_tables, get_async_session
@@ -12,6 +13,7 @@ from models.models import Role, Post, User
 from auth.auth import router as jwt_router
 from auth.utils import hash_password
 from auth.validation import get_current_active_auth_user
+from templates.router import router as base_router
 
 
 app = FastAPI(
@@ -20,17 +22,9 @@ app = FastAPI(
 
 
 #CORS
-origins = [
-    "http://localhost.tiangolo.com",
-    "https://localhost.tiangolo.com",
-    "http://localhost:3000",
-    "http://localhost:8080",
-    "http://localhost:8000",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"], 
     allow_headers=["*"],
@@ -55,7 +49,7 @@ class PostResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: str | None = None
+    email: Optional[str] = None
     username: str
     registered_at: datetime
     role_id: int
@@ -65,7 +59,7 @@ class UserUpdateUsername(BaseModel):
 
 class UserCreate(BaseModel):
     username: str
-    email: str | None = None
+    email: Optional[str] = None
     password: str
 
 #restfulAPI
@@ -76,7 +70,7 @@ async def startup():
 
 #роли
 
-@app.post("/roles/", response_model=dict)
+@app.post("/authenticated/roles/", response_model=dict)
 async def create_role(
     name: str,
     permissions: dict = None,
@@ -93,7 +87,7 @@ async def create_role(
 
 
 
-@app.get("/roles/", response_model=list[dict])
+@app.get("/authenticated/roles/", response_model=list[dict])
 async def get_all_roles(session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_active_auth_user)):
     result = await session.execute(select(Role))
     roles = result.scalars().all()
@@ -101,7 +95,7 @@ async def get_all_roles(session: AsyncSession = Depends(get_async_session), curr
 
 
 
-@app.get('/roles/{role_id}', response_model=RoleResponse)
+@app.get('/authenticated/roles/{role_id}', response_model=RoleResponse)
 async def get_role_by_id(
     role_id: int,
     session: AsyncSession = Depends(get_async_session),
@@ -118,7 +112,7 @@ async def get_role_by_id(
 
 #посты
 
-@app.get('/posts/', response_model=list[dict])
+@app.get('/authenticated/posts/', response_model=list[dict])
 async def get_all_posts(session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_active_auth_user)):
     result = await session.execute(select(Post))
     posts = result.scalars().all()
@@ -126,7 +120,7 @@ async def get_all_posts(session: AsyncSession = Depends(get_async_session), curr
 
 
 
-@app.post('/posts/', response_model=PostResponse)
+@app.post('/authenticated/posts/', response_model=PostResponse)
 async def create_post(post: PostCreate,
         current_user: User = Depends(get_current_active_auth_user),
         session: AsyncSession = Depends(get_async_session),
@@ -139,8 +133,15 @@ async def create_post(post: PostCreate,
 
 #пользователи
 
-@app.post('/users/register', response_model=UserResponse)
-async def register(username: str, password: str, email: str | None = None, session: AsyncSession = Depends(get_async_session)):
+@app.post('/register', response_model=UserResponse)
+async def register(
+    username: str = Form(...),
+    password: str = Form(...),
+    email: Optional[str] = Form(None),
+    session: AsyncSession = Depends(get_async_session)
+):
+    if email == 'null':
+        email = None
     hashed_password = hash_password(password).decode('utf-8')
     new_user = User(username=username, password=hashed_password, email=email)
     session.add(new_user)
@@ -149,7 +150,7 @@ async def register(username: str, password: str, email: str | None = None, sessi
     return new_user
 
 
-@app.get('/users/{user_id}', response_model=UserResponse)
+@app.get('/authenticated/users/{user_id}', response_model=UserResponse)
 async def get_user_by_id(
     user_id: int,
     session: AsyncSession = Depends(get_async_session),
@@ -163,7 +164,7 @@ async def get_user_by_id(
 
 
 
-@app.get('/users/', response_model=list[dict])
+@app.get('/authenticated/users/', response_model=list[dict])
 async def get_all_users(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_auth_user)
@@ -180,7 +181,7 @@ async def get_all_users(
 
 
 
-@app.put('/users/{user_id}', response_model=UserResponse)
+@app.put('/authenticated/users/{user_id}', response_model=UserResponse)
 async def change_username(
     user_id: int,
     user_update_username: UserUpdateUsername,
@@ -199,7 +200,7 @@ async def change_username(
 
 
 
-@app.put('/users/role/{user_id}', response_model=UserResponse)
+@app.put('/authenticated/users/role/{user_id}', response_model=UserResponse)
 async def change_role(
     user_id: int,
     user_update_role: int,
@@ -219,7 +220,7 @@ async def change_role(
     return user
 
 
-@app.delete('/users/{user_id}', response_model=str)
+@app.delete('/authenticated/users/{user_id}', response_model=str)
 async def delete_user_by_id(
     user_id: int,
     user_password: str,
@@ -245,4 +246,8 @@ async def delete_user_by_id(
 
 #роутеры
 
+router = APIRouter()
+
 app.include_router(jwt_router)
+
+app.include_router(base_router)
