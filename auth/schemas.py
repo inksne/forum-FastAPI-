@@ -24,6 +24,6 @@ class UserSchema(BaseModel):
     
     @validator('email', pre=True, always=True)
     def check_email(cls, v):
-        if v == 'null':
+        if v in [None, '', 'null']:
             return None
         return v

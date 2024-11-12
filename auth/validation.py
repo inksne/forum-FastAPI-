@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, Form, Body
+from fastapi import Depends, HTTPException, Request, Form
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
 from starlette import status
@@ -16,12 +16,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/jwt/login")
 
 
 def get_current_token_payload(
-    token: str = Depends(oauth2_scheme)
+    request: Request
 ) -> dict:
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Токен не найден в куки.")
+    
     try:
         payload = decode_jwt(token=token)
     except InvalidTokenError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f'Неверный токен: {e}')
+    
     return payload
 
 
@@ -42,7 +47,6 @@ def get_current_auth_user_from_token_of_type(token_type: str):
     return get_auth_user_from_token
 
 
-
 get_current_auth_user = get_current_auth_user_from_token_of_type(ACCESS_TOKEN_TYPE)
 
 get_current_auth_user_for_refresh = get_current_auth_user_from_token_of_type(REFRESH_TOKEN_TYPE)
@@ -61,7 +65,6 @@ async def get_current_active_auth_user(user: User = Depends(get_current_auth_use
         return user
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Пользователь неактивен')
 
-
 async def validate_auth_user_db(username: str = Form(...), password: str = Form(...), db: AsyncSession = Depends(get_async_session)):
     unauthed_exc = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный логин или пароль")
     
@@ -78,8 +81,3 @@ async def validate_auth_user_db(username: str = Form(...), password: str = Form(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Пользователь неактивен")
     
     return UserSchema.from_attributes(user)
-
-
-# def get_current_auth_user_for_refresh(payload: dict = Depends(get_current_token_payload)) -> UserSchema:
-#     validate_token_type(payload, REFRESH_TOKEN_TYPE)
-#     return get_user_by_token_sub(payload)
