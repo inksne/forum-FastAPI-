@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, APIRouter, Form
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +10,7 @@ from typing import Optional
 from datetime import datetime
 
 from database.database import create_db_and_tables, get_async_session
-from models.models import Role, Post, User
+from models.models import Role, Post, User, Comment
 from auth.auth import router as jwt_router
 from auth.utils import hash_password
 from auth.validation import get_current_active_auth_user
@@ -31,21 +32,10 @@ app.add_middleware(
 )
 
 #pydantic модели для restfulAPI
-class PostCreate(BaseModel):
-    author_id: int
-    title: str
-    description: str
-
 class RoleResponse(BaseModel):
     id: int
     name: str
     permissions: dict
-
-class PostResponse(BaseModel):
-    id: int
-    deployed_at: datetime
-    author_id: int
-    description: str
 
 class UserResponse(BaseModel):
     id: int
@@ -61,6 +51,11 @@ class UserCreate(BaseModel):
     username: str
     email: Optional[str] = None
     password: str
+
+class CommentCreate(BaseModel):
+    author_id: int
+    post_id: int
+    content: str
 
 #restfulAPI
 
@@ -88,7 +83,10 @@ async def create_role(
 
 
 @app.get("/authenticated/roles/", response_model=list[dict])
-async def get_all_roles(session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_active_auth_user)):
+async def get_all_roles(
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
     result = await session.execute(select(Role))
     roles = result.scalars().all()
     return [{"id": role.id, "name": role.name, "permissions": role.permissions} for role in roles]
@@ -101,35 +99,11 @@ async def get_role_by_id(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_auth_user)
 ):
-    if current_user.role_id not in [2, 4]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Недостаточно прав')
     result = await session.execute(select(Role).where(Role.id == role_id))
     role = result.scalar_one_or_none()
     if role is None:
         raise HTTPException(status_code=404, detail='Роль не найдена')
     return role
-
-
-#посты
-
-@app.get('/authenticated/posts/', response_model=list[dict])
-async def get_all_posts(session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_active_auth_user)):
-    result = await session.execute(select(Post))
-    posts = result.scalars().all()
-    return [{'id': post.id, 'deployed_at': post.deployed_at, 'author_id': post.author_id, 'description': post.description} for post in posts]
-
-
-
-@app.post('/authenticated/posts/', response_model=PostResponse)
-async def create_post(post: PostCreate,
-        current_user: User = Depends(get_current_active_auth_user),
-        session: AsyncSession = Depends(get_async_session),
-    ):
-    new_post = Post(author_id=current_user.id, title=post.title, description=post.description)
-    session.add(new_post)
-    await session.commit()
-    await session.refresh(new_post)
-    return new_post
 
 #пользователи
 
@@ -140,7 +114,7 @@ async def register(
     email: Optional[str] = Form(None),
     session: AsyncSession = Depends(get_async_session)
 ):
-    if email == 'null':
+    if email in [None, '', 'null']:
         email = None
     hashed_password = hash_password(password).decode('utf-8')
     new_user = User(username=username, password=hashed_password, email=email)
@@ -244,6 +218,58 @@ async def delete_user_by_id(
     
     return 'Пользователь и все его посты успешно удалены.'
 
+#комментарии
+
+# @app.post('/authenticated/posts/comments/create', response_model=CommentCreate)
+# async def create_comment(
+#     post_id: int,
+#     content: str,
+#     session: AsyncSession = Depends(get_async_session),
+#     current_user: User = Depends(get_current_active_auth_user)
+# ):
+#     result_post = await session.execute(select(Post).where(Post.id == post_id))
+#     post = result_post.scalar_one_or_none()
+#     if post is None:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Пост не найден')
+#     if not content.strip():
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Контент комментария не может быть пустым')
+#     new_comment = Comment(post_id=post.id, author_id=current_user.id, content=content)
+#     session.add(new_comment)
+#     await session.commit()
+#     await session.refresh(new_comment)
+#     return {
+#         "id": new_comment.id,
+#         "author_id": new_comment.author_id,
+#         "post_id": new_comment.post_id,
+#         "content": new_comment.content
+#     }
+
+
+@app.delete('/authenticated/posts/{post_id}/comments/{comment_id}')
+async def delete_comment(
+    post_id: int,
+    comment_id: int,
+    session: AsyncSession = Depends(get_async_session),
+    current_user: User = Depends(get_current_active_auth_user)
+):
+    result_post = await session.execute(select(Post).where(Post.id == post_id))
+    post = result_post.scalar_one_or_none()
+    if post is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Пост не найден')
+    
+    result_comment = await session.execute(select(Comment).where(Comment.id == comment_id))
+    comment = result_comment.scalar_one_or_none()
+    if current_user.role_id == 1 and current_user.id != comment.author_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Недостаточно прав')
+    if comment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Комментарий не найден')
+    
+    await session.delete(comment)
+    await session.commit()
+
+    return 'Комментарий удален'
+    
+
 #роутеры
 
 router = APIRouter()
@@ -251,3 +277,5 @@ router = APIRouter()
 app.include_router(jwt_router)
 
 app.include_router(base_router)
+
+app.mount('/static', StaticFiles(directory='static'), name='static')

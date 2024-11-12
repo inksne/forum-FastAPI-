@@ -4,16 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Регистрация</title>
+    <link rel="icon" type="image/x-icon" href="/static/icon.ico">
     <style>
         body {
             background-color: #212529;
             color: white;
-            font-family: verdana, sans-serif;
+            font-family: Verdana, sans-serif;
+            margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            height: 100vh; /* делаем страницу как бы "высотой в экран" */
+            flex-direction: column;
         }
         
         .form-container {
@@ -42,10 +44,10 @@
         input[type="text"],
         input[type="email"],
         input[type="password"] {
-            width: 95%;
-            padding: 8px;
+            width: 93%;
+            padding: 12px;
             font-size: 14px;
-            margin-top: 7px;
+            margin-top: 9px;
             border: 1px solid #555;
             border-radius: 10px;
             background-color: #444;

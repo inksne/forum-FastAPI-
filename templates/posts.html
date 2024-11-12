@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Посты</title>
+    <link rel="icon" type="image/x-icon" href="/static/icon.ico">
+    <style>
+        body {
+            font-family: verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #212529;
+            color: white;
+        }
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #212524;
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+        li {
+            float: left;
+        }
+
+        li a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+
+        li a:hover {
+            background-color: #101917;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+        }
+
+        .post {
+            background-color:#212524;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            max-width: 100%; /* Убедитесь, что элемент не выходит за пределы */
+            overflow: hidden; /* Скрывает все, что выходит за пределы */
+        }
+
+        .post h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #007BFF;
+        }
+
+        .post p {
+            color: #888;
+            word-wrap: break-word; /* Разрывать длинные слова на следующую строку */
+            overflow-wrap: break-word; /* Дополнительно для старых браузеров */
+            white-space: normal; /* Чтобы текст не выводился в одну строку */
+            text-overflow: ellipsis; /* Показывать многоточие, если текст слишком длинный (если нужно) */
+        }
+
+
+        .post .author {
+            font-weight: bold;
+            color: darkgray;
+        }
+
+        .post .deployed_at {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .view-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #007BFF;
+            text-decoration: none;
+        }
+
+        .view-link:hover {
+            text-decoration: underline;
+        }
+
+        .delete-btn {
+            background-color: #888;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: verdana;
+        }
+
+        .delete-btn:hover {
+            background-color: #999;
+        }
+    </style>
+</head>
+<body>
+    <ul>
+        <li><a href="/authenticated/posts/" id="postsLink">Посты</a></li>
+        <li style="float: left"><a href="/authenticated/posts/create">Создать пост</a></li>
+        <li style="float: right"><a href="javascript:void(0);" onclick="logout()">Выйти</a></li>
+    </ul>
+
+    <div class="container">
+        <div id="postsContainer"></div>
+        <div class="error" id="errorMessage"></div>
+    </div>
+    <div class="container">
+        {% if posts %}
+            {% for post in posts %}
+                <div class="post">
+                    <h2>{{ post.title }}</h2>
+                    <p class="author">Автор: {{ post.author.username }}</p>
+                    <p>{{ post.description }}</p>
+                    <p class="deployed_at">Опубликовано: {{ post.deployed_at }}</p>
+                    <a href="/authenticated/posts/{{ post.id }}/comments/" class="comment-button">Комментарии</a>
+                    <a href="/authenticated/posts/{{ post.id }}/comments_create/" class="comment-button">Добавить комментарий</a>
+                    <button class="delete-btn" data-post-id="{{ post.id }}" onclick="deletePost(this)">Удалить пост</button>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Нет доступных постов.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        async function deletePost(buttonElement) {
+            const postId = buttonElement.getAttribute('data-post-id');
+            const confirmation = confirm("Вы уверены, что хотите удалить этот пост?");
+            if (!confirmation) return;
+
+            try {
+                const response = await fetch(`/authenticated/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',  // Убедитесь, что куки будут отправляться
+                });
+
+                console.log('Response:', response);
+
+                if (response.ok) {
+                    window.location.reload();  // Перезагружаем страницу после удаления
+                } else {
+                    const data = await response.json();
+                    alert(data.detail || "Ошибка при удалении поста");
+                }
+            } catch (error) {
+                alert("Ошибка при удалении поста: " + error.message);
+            }
+        }
+        async function logout() {
+            try {
+                const response = await fetch('/jwt/logout', {
+                    method: 'POST', 
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    window.location.href = '/'; 
+                } else {
+                    console.error('Ошибка при выходе');
+                }
+            } catch (error) {
+                console.error('Ошибка при выходе:', error);
+            }
+        }
+    </script>
+</body>
+</html>

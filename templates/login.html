@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Логин</title>
+    <link rel="icon" type="image/x-icon" href="/static/icon.ico">
     <style>
         /* Общие стили для страницы */
         body {
@@ -11,7 +12,6 @@
             color: white;
             font-family: Verdana, sans-serif;
             margin: 0;
-            padding-top: 50px; /* чтобы меню не накрывало контент */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -123,31 +123,29 @@
         // Обработчик отправки формы
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
             event.preventDefault(); // Останавливаем стандартное поведение формы
-
+    
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
+    
             // Создаем объект FormData
             const formData = new FormData();
             formData.append('username', username);
             formData.append('password', password);
-
+    
             try {
                 // Отправляем данные на сервер через fetch с использованием FormData
                 const response = await fetch('/jwt/login/', {
                     method: 'POST',
-                    body: formData // передаем FormData как тело запроса
+                    body: formData, // передаем FormData как тело запроса
+                    credentials: 'include' // чтобы куки передавались с запросом
                 });
-
+    
                 const result = await response.json();
-
+    
                 // Проверка успешного ответа от сервера
                 if (response.ok) {
-                    // Сохраняем токен в localStorage
-                    localStorage.setItem('access_token', result.access_token);
-
                     // Перенаправляем на страницу с постами
-                    window.location.href = '/authenticated/';
+                    window.location.href = '/authenticated/posts/';
                 } else {
                     // Ошибка, выводим сообщение
                     document.getElementById('error-message').textContent = result.detail || 'Ошибка входа';

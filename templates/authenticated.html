@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Форум - Публикации</title>
+    <title>Главная</title>
+    <link rel="icon" type="image/x-icon" href="/static/icon.ico">
     <style>
         body {
             background-color: #212529;
@@ -68,7 +69,7 @@
 </head>
 <body>
     <ul>
-        <li><a href="/authenticated/posts" id="postsLink">Посты</a></li>
+        <li><a href="/authenticated/posts/" id="postsLink">Посты</a></li>
         <li style="float: right"><a href="javascript:void(0);" onclick="logout()">Выйти</a></li>
     </ul>
 
@@ -76,25 +77,35 @@
         <div id="postsContainer"></div>
         <div class="error" id="errorMessage"></div>
     </div>
+
     <script>
-        // Функция для получения постов с токеном
-        async function getPosts() {
-            const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
-    
-            if (!token) {
-                // Если токен не найден, перенаправляем на страницу входа
-                window.location.href = '/login';
-                return;
+        // Функция для логаута
+        async function logout() {
+            try {
+                const response = await fetch('/jwt/logout', {
+                    method: 'POST',  // Используем POST для логаута
+                    credentials: 'include',  // Убедитесь, что куки будут отправляться
+                });
+
+                if (response.ok) {
+                    // Удаляем куки из браузера и перенаправляем на главную страницу
+                    window.location.href = '/';  // Перенаправляем на главную страницу
+                } else {
+                    console.error('Ошибка при выходе');
+                }
+            } catch (error) {
+                console.error('Ошибка при выходе:', error);
             }
-    
+        }
+
+        // Функция для получения постов
+        async function getPosts() {
             try {
                 const response = await fetch('/authenticated/posts/', {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,  // Добавляем токен в заголовок Authorization
-                    }
+                    credentials: 'include',  // Убедитесь, что куки будут отправляться
                 });
-    
+
                 if (response.ok) {
                     const posts = await response.json();
                     // Далее, обработка данных постов
@@ -105,16 +116,17 @@
                     console.error('Ошибка:', result.detail || 'Не удалось получить посты');
                     if (response.status === 401) {
                         // Если ошибка 401, токен, вероятно, недействителен, перенаправляем на вход
-                        window.location.href = '/login';
+                        window.location.href = '/jwt/login';
                     }
                 }
             } catch (error) {
                 console.error('Ошибка при получении постов:', error);
             }
         }
-    
+
         // Вызов функции для получения постов
         getPosts();
     </script>    
 </body>
 </html>
+
