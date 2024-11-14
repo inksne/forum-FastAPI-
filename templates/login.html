@@ -6,7 +6,6 @@
     <title>Логин</title>
     <link rel="icon" type="image/x-icon" href="/static/icon.ico">
     <style>
-        /* Общие стили для страницы */
         body {
             background-color: #212529;
             color: white;
@@ -15,11 +14,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh; /* делаем страницу как бы "высотой в экран" */
+            height: 100vh; 
             flex-direction: column;
         }
 
-        /* Контейнер для формы */
         .login-container {
             background-color: #333;
             padding: 2em;
@@ -34,7 +32,6 @@
             margin-bottom: 1em;
         }
 
-        /* Группы полей ввода */
         .input-group {
             margin-bottom: 1.5em;
             text-align: left;
@@ -117,12 +114,12 @@
         <div class="register-link">
             <p>Нет аккаунта? <a href="/register" style="color: #00bcd4; text-decoration: none;">Зарегистрируйтесь</a></p>
         </div>
-        <div id="error-message" class="error-message"></div> <!-- Добавим сообщение об ошибке -->
+        <div id="error-message" class="error-message"></div>
     </div>
     <script>
         // Обработчик отправки формы
         document.getElementById('loginForm').addEventListener('submit', async function(event) {
-            event.preventDefault(); // Останавливаем стандартное поведение формы
+            event.preventDefault(); 
     
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -133,26 +130,21 @@
             formData.append('password', password);
     
             try {
-                // Отправляем данные на сервер через fetch с использованием FormData
                 const response = await fetch('/jwt/login/', {
                     method: 'POST',
-                    body: formData, // передаем FormData как тело запроса
-                    credentials: 'include' // чтобы куки передавались с запросом
+                    body: formData, 
+                    credentials: 'include' 
                 });
     
                 const result = await response.json();
     
-                // Проверка успешного ответа от сервера
                 if (response.ok) {
-                    // Перенаправляем на страницу с постами
                     window.location.href = '/authenticated/posts/';
                 } else {
-                    // Ошибка, выводим сообщение
                     document.getElementById('error-message').textContent = result.detail || 'Ошибка входа';
                     document.getElementById('error-message').style.display = 'block';
                 }
             } catch (error) {
-                // Обработка ошибок при отправке запроса
                 document.getElementById('error-message').textContent = 'Ошибка при подключении к серверу';
                 document.getElementById('error-message').style.display = 'block';
             }

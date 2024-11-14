@@ -96,6 +96,7 @@
         <li><a href="/authenticated/posts/">Посты</a></li>
         <li><a href="/authenticated/posts/create">Создать пост</a></li>
         <li style="float: right"><a href="javascript:void(0);" onclick="logout()">Выйти</a></li>
+        <li style="float: right"><a href="/authenticated/users/{{ current_user.id }}/" class="edit-btn">Перейти в свой профиль</a></li>
     </ul>
 
     <div class="container">
@@ -117,7 +118,7 @@
 
     <script>
         document.getElementById('createPostForm').addEventListener('submit', async function (event) {
-            event.preventDefault();  // Предотвращаем стандартное отправление формы
+            event.preventDefault(); 
 
             const title = document.getElementById('title').value;
             const description = document.getElementById('description').value;
@@ -134,7 +135,7 @@
                 });
 
                 if (response.ok) {
-                    window.location.href = '/authenticated/posts/';  // Перенаправляем на страницу с постами после успешного создания
+                    window.location.href = '/authenticated/posts/'; 
                 } else {
                     const data = await response.json();
                     document.getElementById('errorMessage').textContent = data.detail || 'Произошла ошибка при создании поста';

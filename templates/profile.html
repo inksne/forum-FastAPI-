@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Создать комментарий</title>
+    <title>Профиль пользователя</title>
     <link rel="icon" type="image/x-icon" href="/static/icon.ico">
     <style>
         body {
@@ -40,47 +40,43 @@
         }
 
         .container {
-            width: 80%;
+            width: 90%;
             margin: 0 auto;
             padding: 20px;
+            margin-top: 60px;
         }
 
-        h1 {
-            text-align: center;
-            color: white;
+        .profile-card {
+            background-color: #2c2f36;
+            position: relative;
+            padding: 20px 30px 25px 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            color: #888;
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .profile-card h2 {
+            color:darkgray;
         }
 
-        .form-group label {
-            display: block;
-            font-weight: bold;
+        .profile-card p {
+            font-size: 1.1em;
+            margin-bottom: 10px;
         }
 
-        .form-group input, .form-group textarea {
-            font-family: verdana;
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            background-color: #333;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 4px;
-        }
-
-        .form-group button {
-            font-family: verdana;
-            padding: 10px 20px;
+        .edit-btn {
+            position: absolute;      
+            top: 10px;               
+            right: 10px;
             background-color: #888;
             color: white;
+            padding: 10px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 5px;
             cursor: pointer;
         }
 
-        .form-group button:hover {
+        .edit-btn:hover {
             background-color: #999;
         }
     </style>
@@ -90,34 +86,31 @@
         <li><a href="/authenticated/posts/">Посты</a></li>
         <li style="float: left"><a href="/authenticated/posts/create">Создать пост</a></li>
         <li style="float: right"><a href="javascript:void(0);" onclick="logout()">Выйти</a></li>
-        <li style="float: right"><a href="/authenticated/users/{{ current_user.id }}/" class="edit-btn">Перейти в свой профиль</a></li>
     </ul>
 
     <div class="container">
-        <h1>Добавить комментарий для поста "{{ post.title }}"</h1>
-
-        <form id="commentForm" method="POST" action="/authenticated/posts/{{ post.id }}/comments/create/">
-            <div class="form-group">
-                <label for="content">Контент комментария:</label>
-                <textarea id="content" name="content" rows="5" required></textarea>
-            </div>
-            <div class="form-group">
-                <button type="submit">Создать комментарий</button> 
-            </div>
-            <a href="/authenticated/posts/{{ post.id }}/comments" class="view-link">Назад к комментариям</a>
-        </form>
+        <div class="profile-card">
+            <h2>Профиль пользователя</h2>
+            <p><strong>Имя пользователя:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email if user.email else 'Не указан' }}</p>
+            <p><strong>Дата регистрации:</strong> {{ user.registered_at }}</p>
+            <p><strong>Роль:</strong> {{ user.role_id }}</p>
+            {% if current_user.role_id == 3 or current_user.role_id == 4 or current_user.id == user.id %}
+                <a href="/authenticated/users/{{ user.id }}/edit/" class="edit-btn" style="text-decoration: none">Редактировать профиль</a>
+            {% endif %}
+        </div>
     </div>
 
     <script>
         async function logout() {
             try {
                 const response = await fetch('/jwt/logout', {
-                    method: 'POST',
+                    method: 'POST', 
                     credentials: 'include',
                 });
 
                 if (response.ok) {
-                    window.location.href = '/';
+                    window.location.href = '/'; 
                 } else {
                     console.error('Ошибка при выходе');
                 }

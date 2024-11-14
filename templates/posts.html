@@ -56,8 +56,8 @@
             margin-bottom: 15px;
             border-radius: 8px;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-            max-width: 100%; /* Убедитесь, что элемент не выходит за пределы */
-            overflow: hidden; /* Скрывает все, что выходит за пределы */
+            max-width: 100%; 
+            overflow: hidden; 
         }
 
         .post h2 {
@@ -68,10 +68,10 @@
 
         .post p {
             color: #888;
-            word-wrap: break-word; /* Разрывать длинные слова на следующую строку */
-            overflow-wrap: break-word; /* Дополнительно для старых браузеров */
-            white-space: normal; /* Чтобы текст не выводился в одну строку */
-            text-overflow: ellipsis; /* Показывать многоточие, если текст слишком длинный (если нужно) */
+            word-wrap: break-word; 
+            overflow-wrap: break-word;
+            white-space: normal; 
+            text-overflow: ellipsis; 
         }
 
 
@@ -113,9 +113,9 @@
 </head>
 <body>
     <ul>
-        <li><a href="/authenticated/posts/" id="postsLink">Посты</a></li>
         <li style="float: left"><a href="/authenticated/posts/create">Создать пост</a></li>
         <li style="float: right"><a href="javascript:void(0);" onclick="logout()">Выйти</a></li>
+        <li style="float: right"><a href="/authenticated/users/{{ current_user.id }}/" class="edit-btn">Перейти в свой профиль</a></li>
     </ul>
 
     <div class="container">
@@ -127,7 +127,7 @@
             {% for post in posts %}
                 <div class="post">
                     <h2>{{ post.title }}</h2>
-                    <p class="author">Автор: {{ post.author.username }}</p>
+                    <p class="author">Автор: <a href="/authenticated/users/{{ post.author.id }}/">{{ post.author.username }}</a></p>
                     <p>{{ post.description }}</p>
                     <p class="deployed_at">Опубликовано: {{ post.deployed_at }}</p>
                     <a href="/authenticated/posts/{{ post.id }}/comments/" class="comment-button">Комментарии</a>
@@ -152,13 +152,13 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    credentials: 'include',  // Убедитесь, что куки будут отправляться
+                    credentials: 'include',  
                 });
 
                 console.log('Response:', response);
 
                 if (response.ok) {
-                    window.location.reload();  // Перезагружаем страницу после удаления
+                    window.location.reload(); 
                 } else {
                     const data = await response.json();
                     alert(data.detail || "Ошибка при удалении поста");

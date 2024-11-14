@@ -14,7 +14,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh; /* делаем страницу как бы "высотой в экран" */
+            height: 100vh;
             flex-direction: column;
         }
         
@@ -104,28 +104,23 @@
 
     <script>
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
-            e.preventDefault(); // Останавливаем стандартное поведение формы
+            e.preventDefault(); 
 
             const formData = new FormData(e.target);
             const data = {
                 username: formData.get('username'),
-                email: formData.get('email') || null,  // Если email не пустой
+                email: formData.get('email') || null, 
                 password: formData.get('password')
             };
 
             try {
-                // Отправка данных через fetch
                 const response = await fetch('/register', {
                     method: 'POST',
-                    body: new URLSearchParams(data),  // Отправка данных как форма
+                    body: new URLSearchParams(data), 
                 });
 
-                // Проверяем успешный ответ
                 if (response.ok) {
                     const result = await response.json();
-                    // alert('Пользователь успешно зарегистрирован!');
-                    // Можно перенаправить или очистить форму
-                    // document.getElementById('registerForm').reset();
                     window.location.href = '/jwt/login/';
                 } else {
                     const errorData = await response.json();
