@@ -1,4 +1,3 @@
 forum_env/
-certs/
 .env
 __pycache__/
