@@ -30,7 +30,6 @@ async def auth_user_issue_jwt(response: Response, user: User = Depends(validate_
     access_token = create_access_token(user)
     refresh_token = create_refresh_token(user)
     
-    # Сохраняем access_token в куки
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, max_age=timedelta(hours=2))
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, max_age=timedelta(days=30))  # опционально
     
@@ -59,9 +58,5 @@ async def auth_user_check_self_info(
 async def logout(response: Response):
     """Удаляем токен из куки и перенаправляем на главную страницу."""
     
-    # Удаляем куки, установив максимальное время жизни в прошлом
     response.delete_cookie(key="access_token", httponly=True, secure=False, samesite="Lax")
     response.delete_cookie(key="refresh_token", httponly=True, secure=False, samesite="Lax")
-
-    # Перенаправляем на главную страницу
-    # return RedirectResponse(url="/")

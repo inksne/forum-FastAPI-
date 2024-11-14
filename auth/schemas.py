@@ -5,12 +5,9 @@ from typing import Optional
 
 class UserSchema(BaseModel):
     model_config = ConfigDict(strict=True, from_attributes=True)
-    # id: int
     username: str
     password: str | bytes
     email: Optional[EmailStr] = None
-    # registered_at: datetime
-    # role_id: int
     active: bool = True
 
     @classmethod
