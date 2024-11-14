@@ -87,6 +87,8 @@ async def get_all_roles(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_auth_user)
 ):
+    if current_user.role_id == 6:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
     result = await session.execute(select(Role))
     roles = result.scalars().all()
     return [{"id": role.id, "name": role.name, "permissions": role.permissions} for role in roles]
@@ -99,6 +101,8 @@ async def get_role_by_id(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_auth_user)
 ):
+    if current_user.role_id == 6:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
     result = await session.execute(select(Role).where(Role.id == role_id))
     role = result.scalar_one_or_none()
     if role is None:
@@ -124,25 +128,14 @@ async def register(
     return new_user
 
 
-@app.get('/authenticated/users/{user_id}', response_model=UserResponse)
-async def get_user_by_id(
-    user_id: int,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(get_current_active_auth_user)
-):
-    result = await session.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=404, detail='Пользователь не найден')
-    return user
-
-
 
 @app.get('/authenticated/users/', response_model=list[dict])
 async def get_all_users(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_auth_user)
 ):
+    if current_user.role_id == 6:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
     result = await session.execute(select(User))
     users = result.scalars().all()
     return [
@@ -152,25 +145,6 @@ async def get_all_users(
         'registered_at': user.registered_at,
         'role_id': user.role_id} 
         for user in users]
-
-
-
-@app.put('/authenticated/users/{user_id}', response_model=UserResponse)
-async def change_username(
-    user_id: int,
-    user_update_username: UserUpdateUsername,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(get_current_active_auth_user)
-):
-    result = await session.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=404, detail='Пользователь не найден')
-    user.username = user_update_username.username
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
-    return user
 
 
 
@@ -193,57 +167,7 @@ async def change_role(
     await session.refresh(user)
     return user
 
-
-@app.delete('/authenticated/users/{user_id}', response_model=str)
-async def delete_user_by_id(
-    user_id: int,
-    user_password: str,
-    session: AsyncSession = Depends(get_async_session),
-    current_user: User = Depends(get_current_active_auth_user)
-):
-    result_user = await session.execute(select(User).where(User.id == user_id, User.hashed_password == user_password))
-    user = result_user.scalar_one_or_none()
-    
-    if user is None:
-        raise HTTPException(status_code=404, detail='Пользователь не найден')
-
-    result_posts = await session.execute(select(Post).where(Post.author_id == user_id))
-    posts = result_posts.scalars().all()
-
-    for post in posts:
-        await session.delete(post)
-
-    await session.delete(user)
-    await session.commit()
-    
-    return 'Пользователь и все его посты успешно удалены.'
-
 #комментарии
-
-# @app.post('/authenticated/posts/comments/create', response_model=CommentCreate)
-# async def create_comment(
-#     post_id: int,
-#     content: str,
-#     session: AsyncSession = Depends(get_async_session),
-#     current_user: User = Depends(get_current_active_auth_user)
-# ):
-#     result_post = await session.execute(select(Post).where(Post.id == post_id))
-#     post = result_post.scalar_one_or_none()
-#     if post is None:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Пост не найден')
-#     if not content.strip():
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Контент комментария не может быть пустым')
-#     new_comment = Comment(post_id=post.id, author_id=current_user.id, content=content)
-#     session.add(new_comment)
-#     await session.commit()
-#     await session.refresh(new_comment)
-#     return {
-#         "id": new_comment.id,
-#         "author_id": new_comment.author_id,
-#         "post_id": new_comment.post_id,
-#         "content": new_comment.content
-#     }
-
 
 @app.delete('/authenticated/posts/{post_id}/comments/{comment_id}')
 async def delete_comment(
@@ -252,6 +176,8 @@ async def delete_comment(
     session: AsyncSession = Depends(get_async_session),
     current_user: User = Depends(get_current_active_auth_user)
 ):
+    if current_user.role_id == 6:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
     result_post = await session.execute(select(Post).where(Post.id == post_id))
     post = result_post.scalar_one_or_none()
     if post is None:
