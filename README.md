@@ -58,7 +58,7 @@
 ## CI/CD
 
 В пайплайне я добавил всего лишь две джобы: build и test.
-Да, джобы по типу deploy нет, т.к у [render](https://render.com/) CI/CD уже настроено,
+Да, джобы по типу deploy нет, т.к у [render]((https://forum-vywi.onrender.com)) CI/CD уже настроено,
 но на всякий случай закомментил джобу deploy.
 
 ## Ссылочка
