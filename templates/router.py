@@ -70,16 +70,16 @@ async def edit_profile_page(
     current_user: User = Depends(get_current_active_auth_user)
 ):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
 
     if current_user.id != user_id and current_user.role_id != 3 and current_user.role_id != 4:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для редактирования")
+        return templates.TemplateResponse(request, '403.html')
 
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+        return templates.TemplateResponse(request, '404.html')
 
     return templates.TemplateResponse(request, 'edit_profile.html', {'user': user, 'current_user': current_user})
 
@@ -93,7 +93,7 @@ async def get_all_posts(
     current_user: User = Depends(get_current_active_auth_user)
 ):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
     result = await session.execute(select(Post).options(selectinload(Post.author)))
     posts = result.scalars().all()
     return templates.TemplateResponse(request, 'posts.html', {'posts': posts, 'current_user': current_user})
@@ -108,11 +108,11 @@ async def get_comment_create_page(
     current_user: User = Depends(get_current_active_auth_user)
 ):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
     result_post = await session.execute(select(Post).where(Post.id == post_id))
     post = result_post.scalar_one_or_none()
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        return templates.TemplateResponse(request, '404.html')
     return templates.TemplateResponse(request, 'comments_create.html', {'post': post, 'current_user': current_user})
 
 
@@ -125,7 +125,7 @@ async def get_comments_for_post(
     current_user: User = Depends(get_current_active_auth_user)
 ):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
     result_post = await session.execute(
         select(Post)
         .where(Post.id == post_id)
@@ -133,7 +133,7 @@ async def get_comments_for_post(
     )
     post = result_post.scalar_one_or_none()
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        return templates.TemplateResponse(request, '404.html')
     comments = post.comments
     return templates.TemplateResponse(
         request, "comments.html", {
@@ -153,11 +153,11 @@ async def create_comment(
     current_user: User = Depends(get_current_active_auth_user)
 ):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
     result_post = await session.execute(select(Post).where(Post.id == post_id))
     post = result_post.scalar_one_or_none()
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        return templates.TemplateResponse(request, '404.html')
     if not content.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Контент комментария не может быть пустым') 
     new_comment = Comment(post_id=post.id, author_id=current_user.id, content=content)
@@ -175,7 +175,7 @@ async def create_comment(
 @router.get('/authenticated/posts/create')
 async def create_post_page(request: Request, current_user: User = Depends(get_current_active_auth_user)):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
     return templates.TemplateResponse(request, 'create_post.html', {'current_user': current_user})
 
 
@@ -206,7 +206,7 @@ async def delete_post(
 ):
     result_post = await session.execute(select(Post).where(Post.id == post_id).options(selectinload(Post.comments)))
     post = result_post.scalar_one_or_none()
-    if current_user.role_id == 1 or current_user.role_id == 6 and current_user.id != post.author_id:
+    if current_user.role_id in {1, 6} and current_user.id != post.author_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для удаления поста")
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
@@ -225,12 +225,12 @@ async def get_user_profile_page(
     current_user: User = Depends(get_current_active_auth_user)
 ):
     if current_user.role_id == 6:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
+        return templates.TemplateResponse(request, '403.html')
     result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
 
     if user is None:
-        raise HTTPException(status_code=404, detail='Пользователь не найден')
+        return templates.TemplateResponse(request, '404.html')
 
     return templates.TemplateResponse(request, 'profile.html', {'user': user, 'current_user': current_user})
 
@@ -246,7 +246,7 @@ async def update_profile(
     if current_user.role_id == 6:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
 
-    if current_user.id != user_id and current_user.role_id not in [3, 4]:
+    if current_user.id != user_id and current_user.role_id not in {3, 4}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав для редактирования")
 
     result = await session.execute(select(User).where(User.id == user_id))
@@ -265,17 +265,18 @@ async def update_profile(
 
 @router.post('/authenticated/users/{user_id}/delete')
 async def delete_user(
+    request: Request,
     user_id: int,
     current_user: User = Depends(get_current_active_auth_user),
     session: AsyncSession = Depends(get_async_session)
 ):
-    if current_user.id != user_id and current_user.role_id != 3 and current_user.role_id != 4:  
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
+    if current_user.id != user_id and current_user.role_id not in {3, 4}:
+        return templates.TemplateResponse(request, '403.html')
 
     result = await session.execute(select(User).where(User.id == user_id))
     user_to_delete = result.scalar_one_or_none()
     if not user_to_delete:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
+        return templates.TemplateResponse(request, '404.html')
 
     result_posts = await session.execute(select(Post).where(Post.author_id == user_id))
     posts = result_posts.scalars().all()
@@ -290,7 +291,7 @@ async def delete_user(
     await session.delete(user_to_delete)
     await session.commit()
 
-    return {'detail': 'Пользователь и его данные успешно удалены'}
+    return templates.TemplateResponse(request, '404.html')
 
 
 
@@ -300,7 +301,7 @@ async def ban_user(
     current_user: User = Depends(get_current_active_auth_user),
     session: AsyncSession = Depends(get_async_session)
 ):
-    if current_user.role_id != 3 and current_user.role_id != 4:
+    if current_user.role_id not in {3, 4}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
 
     result = await session.execute(select(User).where(User.id == user_id))
@@ -323,7 +324,7 @@ async def unban_user(
     current_user: User = Depends(get_current_active_auth_user),
     session: AsyncSession = Depends(get_async_session)
 ):
-    if current_user.role_id != 3 and current_user.role_id != 4:
+    if current_user.role_id not in {3, 4}:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
 
     result = await session.execute(select(User).where(User.id == user_id))

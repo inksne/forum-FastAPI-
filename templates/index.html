@@ -1,19 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Приветствуем на форуме!{% endblock %}
+<title>Приветствуем на форуме!</title>
 
-{% block content %}
-    <h1>Добро пожаловать на наш форум!</h1>
-    <p>Здесь вы можете обсудить всё, что вас интересует!</p>
-    <p>От самых актуальных тем до хобби и увлечений — мы рады каждой новой идее.</p>
-    <p>Присоединяйтесь к обсуждениям, делитесь опытом и находите единомышленников.</p>
-    <div style="text-align:center">
-        <a href="/jwt/login/" style="text-decoration: none;">
-            <button class="active">Войти</button>
-        </a>
-    </div>      
+{% block styles %}
+    {{ super() }}
     <style>
         h1 {
+            padding: 10px;
             text-align: center;
         }
 
@@ -37,4 +30,16 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
     </style>
+{% endblock %}
+
+{% block content %}
+    <h1>Добро пожаловать на наш форум!</h1>
+    <p>Здесь вы можете обсудить всё, что вас интересует!</p>
+    <p>От самых актуальных тем до хобби и увлечений — мы рады каждой новой идее.</p>
+    <p>Присоединяйтесь к обсуждениям, делитесь опытом и находите единомышленников.</p>
+    <div style="text-align:center">
+        <a href="/jwt/login/" style="text-decoration: none;">
+            <button class="active">Войти</button>
+        </a>
+    </div>      
 {% endblock %}
