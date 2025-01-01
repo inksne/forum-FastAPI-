@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from starlette import status
 
 from pydantic import BaseModel
@@ -17,9 +18,12 @@ from auth.validation import get_current_active_auth_user
 from templates.router import router as base_router
 
 
-app = FastAPI(
-    title='forum'
-)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_db_and_tables()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 
 #CORS
@@ -58,10 +62,6 @@ class CommentCreate(BaseModel):
     content: str
 
 #restfulAPI
-
-@app.on_event("startup")
-async def startup():
-    await create_db_and_tables()
 
 #роли
 
