@@ -3,8 +3,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import DeclarativeBase, relationship
 
-Base: DeclarativeMeta = declarative_base()
-
 class Base(DeclarativeBase):
     pass
 
