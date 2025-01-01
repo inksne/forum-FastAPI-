@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from models.models import User, Post, Comment
 from database.database import get_async_session
 from auth.validation import get_current_active_auth_user
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 router = APIRouter()
@@ -31,7 +31,7 @@ class PostCreate(BaseModel):
 
 @router.get('/')
 def get_base_page(request: Request):
-    return templates.TemplateResponse('index.html', {'request': request})
+    return templates.TemplateResponse(request, 'index.html')
 
 
 
@@ -40,25 +40,25 @@ async def read_root(request: Request):
     post = {
         'description': "Это очень длинное описание, которое должно быть обрезано после определенного количества слов."
     }
-    return templates.TemplateResponse("posts.html", {"request": request, "post": post})
+    return templates.TemplateResponse(request, "posts.html", {"post": post})
 
 
 
 @router.get('/jwt/login/')
 def get_login_page(request: Request):
-    return templates.TemplateResponse('login.html', {'request': request})
+    return templates.TemplateResponse(request, 'login.html')
 
 
 
 @router.get('/register')
 def get_register_page(request: Request):
-    return templates.TemplateResponse('register.html', {'request': request})
+    return templates.TemplateResponse(request, 'register.html')
 
 
 
 @router.get('/about_us')
 def get_about_us_page(request: Request):
-    return templates.TemplateResponse('about_us.html', {'request': request})
+    return templates.TemplateResponse(request, 'about_us.html')
 
 
 
@@ -81,7 +81,7 @@ async def edit_profile_page(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
-    return templates.TemplateResponse('edit_profile.html', {'request': request, 'user': user, 'current_user': current_user})
+    return templates.TemplateResponse(request, 'edit_profile.html', {'user': user, 'current_user': current_user})
 
 
 
@@ -96,7 +96,7 @@ async def get_all_posts(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
     result = await session.execute(select(Post).options(selectinload(Post.author)))
     posts = result.scalars().all()
-    return templates.TemplateResponse('posts.html', {'request': request, 'posts': posts, 'current_user': current_user})
+    return templates.TemplateResponse(request, 'posts.html', {'posts': posts, 'current_user': current_user})
 
 
 
@@ -113,7 +113,7 @@ async def get_comment_create_page(
     post = result_post.scalar_one_or_none()
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
-    return templates.TemplateResponse('comments_create.html', {'request': request, 'post': post, 'current_user': current_user})
+    return templates.TemplateResponse(request, 'comments_create.html', {'post': post, 'current_user': current_user})
 
 
 
@@ -135,7 +135,12 @@ async def get_comments_for_post(
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
     comments = post.comments
-    return templates.TemplateResponse("comments.html", {"request": request, "post": post, "comments": comments, 'current_user': current_user})
+    return templates.TemplateResponse(
+        request, "comments.html", {
+            "post": post,
+            "comments": comments,
+            'current_user': current_user
+        })
 
 
 
@@ -159,14 +164,19 @@ async def create_comment(
     session.add(new_comment)
     await session.commit()
     await session.refresh(new_comment)
-    return templates.TemplateResponse("comments_create.html", {"request": request, "post": post, "comment": new_comment, 'current_user': current_user})
+    return templates.TemplateResponse(
+        request, "comments_create.html", {
+            "post": post,
+            "comment": new_comment,
+            'current_user': current_user
+        })
 
 
 @router.get('/authenticated/posts/create')
 async def create_post_page(request: Request, current_user: User = Depends(get_current_active_auth_user)):
     if current_user.role_id == 6:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Вы забанены')
-    return templates.TemplateResponse('create_post.html', {'request': request, 'current_user': current_user})
+    return templates.TemplateResponse(request, 'create_post.html', {'current_user': current_user})
 
 
 
@@ -222,7 +232,7 @@ async def get_user_profile_page(
     if user is None:
         raise HTTPException(status_code=404, detail='Пользователь не найден')
 
-    return templates.TemplateResponse('profile.html', {'request': request, 'user': user, 'current_user': current_user})
+    return templates.TemplateResponse(request, 'profile.html', {'user': user, 'current_user': current_user})
 
 
 
