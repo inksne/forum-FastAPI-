@@ -1,1 +1,0 @@
-web: gunicorn myproject.wsgi:application --preload --workers 3 --threads 2 --bind 0.0.0.0:10000
