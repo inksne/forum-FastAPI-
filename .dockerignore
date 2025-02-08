@@ -1,3 +1,8 @@
+<<<<<<< HEAD
 __pycache__/
 libenv/
+=======
+forum_env/
+__pycache__/
+>>>>>>> 80a2df1d61926522f78e1a6921ba26970a10d7a7
 .gitignore
