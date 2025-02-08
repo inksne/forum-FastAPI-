@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+<title>Приветствуем на форуме!</title>
+
+{% block styles %}
+    {{ super() }}
+    <style>
+        h1 {
+            padding: 10px;
+            text-align: center;
+        }
+
+        p {
+            text-align: center;
+        }
+        
+        button {
+            text-align: center;
+            background-color:dimgray;
+            color: white;
+            display: flex;
+            margin: 0 auto;
+            border: none;
+            padding: 1em 2em;
+            font-family: verdana;
+        }
+
+        button:active {
+            transform: scale(0.95); 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h1>Добро пожаловать на наш форум!</h1>
+    <p>Здесь вы можете обсудить всё, что вас интересует!</p>
+    <p>От самых актуальных тем до хобби и увлечений — мы рады каждой новой идее.</p>
+    <p>Присоединяйтесь к обсуждениям, делитесь опытом и находите единомышленников.</p>
+    <div style="text-align:center">
+        <a href="/jwt/login/" style="text-decoration: none;">
+            <button class="active">Войти</button>
+        </a>
+    </div>      
+{% endblock %}

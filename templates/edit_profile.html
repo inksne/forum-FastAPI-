@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактировать профиль</title>
+    <link rel="icon" type="image/x-icon" href="/static/icon.ico">
+    <style>
+        body {
+            font-family: verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #212529;
+            color: white;
+        }
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #212524;
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+        li {
+            float: left;
+        }
+
+        li a {
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+
+        li a:hover {
+            background-color: #101917;
+        }
+
+        .container {
+            width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+            margin-top: 60px;
+        }
+
+        .form-container {
+            background-color: #2c2f36;
+            position: relative;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            color: #888;
+        }
+
+        .form-container input {
+            padding: 10px;
+            margin-bottom: 15px;
+            width: 100%;
+            background-color: #333;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+
+        .form-container button {
+            padding: 10px 15px;
+            background-color: #888;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            margin-top: 10px
+        }
+
+        .form-container button:hover {
+            background-color: #999;
+        }
+    </style>
+</head>
+<body>
+    <ul>
+        <li><a href="/authenticated/posts/">Посты</a></li>
+        <li><a href="/authenticated/posts/create">Создать пост</a></li>
+        <li style="float: right"><a href="javascript:void(0);" onclick="logout()">Выйти</a></li>
+    </ul>
+
+    <div class="container">
+        <div class="form-container">
+            <h2>Редактирование профиля</h2>
+            <form id="edit-profile-form" method="POST" action="/authenticated/users/{{ user.id }}/edit">
+                <label for="username">Новый никнейм:</label>
+                <input type="text" id="username" name="username" value="{{ user.username }}" required>
+
+                <button type="submit">Сохранить изменения</button>
+            </form>
+
+            <form id="delete-profile-form" method="POST" action="/authenticated/users/{{ user.id }}/delete">
+                <button type="submit" style="background-color:coral">Удалить профиль</button>
+            </form>
+
+            {% if current_user.role_id == 3 or current_user.role_id == 4 %}
+            <div class="admin-actions">
+                <h3>Администраторские действия</h3>
+                <form id="ban-form" method="POST" action="/authenticated/users/{{ user.id }}/ban">
+                    <button type="submit" class="ban-button" style="background-color:cadetblue">Заблокировать профиль</button>
+                </form>
+                
+                <form id="unban-form" method="POST" action="/authenticated/users/{{ user.id }}/unban">
+                    <button type="submit" class="unban-button" style="background-color:forestgreen">Разблокировать профиль</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+        async function logout() {
+            try {
+                const response = await fetch('/jwt/logout', {
+                    method: 'POST',
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    console.error('Ошибка при выходе');
+                }
+            } catch (error) {
+                console.error('Ошибка при выходе:', error);
+            }
+        }
+        document.getElementById("ban-form").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            await changeUserStatus("ban");
+        });
+
+        document.getElementById("unban-form").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            await changeUserStatus("unban");
+        });
+
+        async function changeUserStatus(action) {
+            try {
+                const response = await fetch(`/authenticated/users/{{ user.id }}/${action}`, {
+                    method: 'POST', 
+                    credentials: 'include',
+                });
+
+                if (response.ok) {
+                    alert(`Пользователь успешно ${action === 'ban' ? 'заблокирован' : 'разблокирован'}`);
+                } else {
+                    console.error('Ошибка при изменении статуса пользователя');
+                }
+            } catch (error) {
+                console.error('Ошибка при изменении статуса пользователя:', error);
+            }
+        }
+        
+        document.getElementById("delete-profile-form").addEventListener("submit", async function(event) {
+            event.preventDefault(); 
+            await deleteProfile();  
+        });
+
+        async function deleteProfile() {
+            const form = document.getElementById("delete-profile-form");
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = value;
+            });
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST', 
+                    body: JSON.stringify(data),  
+                    headers: {
+                        'Content-Type': 'application/json',  
+                    },
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    alert("Профиль успешно удален!");
+                    window.location.href = "/";  
+                } else {
+                    const error = await response.json();
+                    console.error('Ошибка при удалении профиля:', error);
+                }
+            } catch (error) {
+                console.error('Ошибка при удалении профиля:', error);
+            }
+        }
+    </script>
+</body>
+</html>
