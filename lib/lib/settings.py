@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-from config import DB_NAME, DB_PASS, DB_USER
+from config import POSTGRES_PASSWORD, POSTGRES_USER, POSTGRES_DB
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -85,10 +85,10 @@ WSGI_APPLICATION = 'lib.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': f'{DB_NAME}',
-        'USER': f'{DB_USER}',
-        'PASSWORD': f'{DB_PASS}',
-        'HOST': 'localhost',
+        'NAME': f'{POSTGRES_DB}',
+        'USER': f'{POSTGRES_USER}',
+        'PASSWORD': f'{POSTGRES_PASSWORD}',
+        'HOST': 'postgres',
         'PORT': '5432',
     }
 }
